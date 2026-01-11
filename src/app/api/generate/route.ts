@@ -166,9 +166,26 @@ async function saveToBlob(imageUrl: string): Promise<string> {
   }
 
   try {
-    // Fetch the image
-    const imageResponse = await fetch(imageUrl);
-    const imageBlob = await imageResponse.blob();
+    let imageBlob: Blob;
+
+    // Handle base64 data URLs
+    if (imageUrl.startsWith('data:')) {
+      // Extract base64 data from data URL
+      const base64Data = imageUrl.split(',')[1];
+      const mimeType = imageUrl.split(':')[1].split(';')[0];
+      
+      // Convert base64 to binary
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      imageBlob = new Blob([bytes], { type: mimeType });
+    } else {
+      // Fetch the image from URL
+      const imageResponse = await fetch(imageUrl);
+      imageBlob = await imageResponse.blob();
+    }
 
     // Generate a unique filename
     const timestamp = Date.now();
