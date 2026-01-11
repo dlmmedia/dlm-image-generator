@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0f;
-  --foreground: #f5f5f7;
-  --card-bg: #12121a;
-  --card-hover: #1a1a24;
-  --accent: #8b5cf6;
-  --accent-2: #ec4899;
-  --border: #2a2a35;
-  --muted: #6b7280;
+  --background: #000000;
+  --foreground: #ffffff;
+  --card-bg: #0a0a0a;
+  --card-hover: #121212;
+  --accent: #BFFF00;
+  --accent-2: #D4FF00;
+  --border: #1f1f1f;
+  --muted: #888888;
 }
 
 @theme inline {
@@ -52,14 +52,12 @@ body {
 
 /* Gradient backgrounds */
 .gradient-bg {
-  background: linear-gradient(135deg, #0a0a0f 0%, #1a1025 50%, #0f0a1a 100%);
+  background: #000000;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(191, 255, 0, 0.3);
 }
 
 /* Card hover effects */
@@ -68,8 +66,9 @@ body {
 }
 
 .card-glow:hover {
-  box-shadow: 0 0 30px rgba(139, 92, 246, 0.15), 
-              0 0 60px rgba(236, 72, 153, 0.08);
+  box-shadow: 0 0 30px rgba(191, 255, 0, 0.1), 
+              0 0 10px rgba(212, 255, 0, 0.05);
+  border-color: rgba(191, 255, 0, 0.3);
 }
 
 /* Image container with aspect ratio */
@@ -90,11 +89,11 @@ body {
 
 /* Button styles */
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  color: white;
+  background: var(--accent);
+  color: black;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.2s ease;
   border: none;
   cursor: pointer;
@@ -102,7 +101,8 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 5px 20px rgba(191, 255, 0, 0.3);
+  background: var(--accent-2);
 }
 
 .btn-secondary {
@@ -119,6 +119,7 @@ body {
 .btn-secondary:hover {
   background: var(--card-hover);
   border-color: var(--accent);
+  color: white;
 }
 
 /* Skeleton loading */
@@ -176,3 +177,16 @@ body {
 .stagger-children > *:nth-child(10) { animation-delay: 0.5s; }
 .stagger-children > *:nth-child(11) { animation-delay: 0.55s; }
 .stagger-children > *:nth-child(12) { animation-delay: 0.6s; }
+
+/* Custom utility classes */
+.text-accent {
+  color: var(--accent);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+}
+
+.border-accent {
+  border-color: var(--accent);
+}

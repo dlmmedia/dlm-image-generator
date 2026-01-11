@@ -18,6 +18,41 @@ interface GenerateRequest {
   seed?: number;
 }
 
+// Helper function to extract base64 data from a data URL
+function extractBase64FromDataUrl(dataUrl: string): { base64: string; mimeType: string } | null {
+  if (!dataUrl.startsWith('data:')) {
+    return null;
+  }
+  
+  const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!matches) {
+    return null;
+  }
+  
+  return {
+    mimeType: matches[1],
+    base64: matches[2],
+  };
+}
+
+// Helper function to fetch an image URL and convert to base64
+async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string }> {
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch reference image: ${response.status}`);
+  }
+  
+  const blob = await response.blob();
+  const arrayBuffer = await blob.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const base64 = buffer.toString('base64');
+  
+  return {
+    base64,
+    mimeType: blob.type || 'image/png',
+  };
+}
+
 async function generateWithGeminiImagen(
   prompt: string,
   isPro: boolean,
@@ -51,6 +86,56 @@ async function generateWithGeminiImagen(
 
   console.log(`[Imagen] Generating with model: ${modelName}, aspect ratio: ${ar}`);
   console.log(`[Imagen] Prompt: ${prompt.substring(0, 100)}...`);
+  
+  // Build the instance object
+  interface ImagenInstance {
+    prompt: string;
+    referenceImages?: Array<{
+      referenceImage: {
+        bytesBase64Encoded: string;
+      };
+      referenceType: string;
+    }>;
+  }
+  
+  const instance: ImagenInstance = {
+    prompt: prompt,
+  };
+  
+  // Process reference image if provided
+  if (options.referenceImageUrl) {
+    console.log(`[Imagen] Processing reference image...`);
+    
+    try {
+      let imageData: { base64: string; mimeType: string } | null = null;
+      
+      // Check if it's a data URL (base64 encoded)
+      if (options.referenceImageUrl.startsWith('data:')) {
+        imageData = extractBase64FromDataUrl(options.referenceImageUrl);
+      } else {
+        // Fetch the image from URL
+        imageData = await fetchImageAsBase64(options.referenceImageUrl);
+      }
+      
+      if (imageData) {
+        console.log(`[Imagen] Reference image loaded, size: ${imageData.base64.length} chars`);
+        
+        // Add reference image to the instance
+        // Using REFERENCE_TYPE_STYLE to apply the style from the reference image
+        instance.referenceImages = [
+          {
+            referenceImage: {
+              bytesBase64Encoded: imageData.base64,
+            },
+            referenceType: "REFERENCE_TYPE_STYLE",
+          }
+        ];
+      }
+    } catch (error) {
+      console.error(`[Imagen] Failed to process reference image:`, error);
+      // Continue without reference image rather than failing
+    }
+  }
 
   const response = await fetch(apiUrl, {
     method: "POST",
@@ -58,11 +143,7 @@ async function generateWithGeminiImagen(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      instances: [
-        {
-          prompt: prompt,
-        }
-      ],
+      instances: [instance],
       parameters: {
         sampleCount: 1,
         aspectRatio: ar,
