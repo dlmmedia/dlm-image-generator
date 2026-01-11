@@ -13,7 +13,7 @@ const letterVariants = {
       stiffness: 50
     }
   }
-};
+} as const;
 
 const wordVariants = {
   hidden: { opacity: 0 },
