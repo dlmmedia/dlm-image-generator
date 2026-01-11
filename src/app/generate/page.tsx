@@ -20,6 +20,7 @@ import {
   Loader2,
   ImageIcon,
   Info,
+  AlertCircle,
 } from "lucide-react";
 
 function GeneratePageContent() {
@@ -35,6 +36,7 @@ function GeneratePageContent() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [showStylePicker, setShowStylePicker] = useState(false);
 
   useEffect(() => {
@@ -64,6 +66,7 @@ function GeneratePageContent() {
 
     setIsGenerating(true);
     setGeneratedImage(null);
+    setGenerationError(null);
 
     try {
       const response = await fetch("/api/generate", {
@@ -81,19 +84,19 @@ function GeneratePageContent() {
 
       const data = await response.json();
 
-      if (data.imageUrl) {
+      if (response.ok && data.imageUrl) {
         setGeneratedImage(data.imageUrl);
-      } else if (data.error) {
-        console.error("Generation error:", data.error);
-        // For demo purposes, show a placeholder
-        setGeneratedImage(selectedStyle?.exampleImages[0] || null);
+        setGenerationError(null);
+      } else {
+        const errorMessage = data.details || data.error || "Generation failed";
+        console.error("Generation error:", errorMessage);
+        setGenerationError(errorMessage);
       }
     } catch (error) {
       console.error("Generation failed:", error);
-      // For demo purposes, show the style's example image
-      if (selectedStyle) {
-        setGeneratedImage(selectedStyle.exampleImages[0]);
-      }
+      setGenerationError(
+        error instanceof Error ? error.message : "Network error. Please try again."
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -438,6 +441,24 @@ function GeneratePageContent() {
                       <p className="text-[var(--muted)]">
                         Creating your masterpiece...
                       </p>
+                    </div>
+                  </div>
+                ) : generationError ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[var(--card-hover)]">
+                    <div className="text-center p-8">
+                      <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                      <p className="text-red-400 font-medium mb-2">
+                        Generation Failed
+                      </p>
+                      <p className="text-sm text-[var(--muted)] max-w-xs mx-auto">
+                        {generationError}
+                      </p>
+                      <button
+                        onClick={handleGenerate}
+                        className="mt-4 px-4 py-2 bg-[var(--accent)] text-white rounded-lg text-sm hover:opacity-90 transition-opacity"
+                      >
+                        Try Again
+                      </button>
                     </div>
                   </div>
                 ) : generatedImage ? (

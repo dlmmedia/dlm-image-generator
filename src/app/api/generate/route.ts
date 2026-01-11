@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import OpenAI from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getStyleById } from "@/data/styles";
 
 // Initialize OpenAI client (will use OPENAI_API_KEY env var)
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Initialize Gemini client
-const genAI = new GoogleGenerativeAI(process.env.NANO_BANANA_API_KEY || "");
 
 interface GenerateRequest {
   prompt: string;
@@ -22,7 +18,7 @@ interface GenerateRequest {
   seed?: number;
 }
 
-async function generateWithNanoBanana(
+async function generateWithGeminiImagen(
   prompt: string,
   isPro: boolean,
   options: {
@@ -35,29 +31,12 @@ async function generateWithNanoBanana(
   const apiKey = process.env.NANO_BANANA_API_KEY;
 
   if (!apiKey) {
-    throw new Error("NANO_BANANA_API_KEY (Gemini Key) is not configured");
+    throw new Error("NANO_BANANA_API_KEY (Gemini API Key) is not configured");
   }
 
-  // Use Gemini / Imagen model
-  // Note: Using imagen-3.0-generate-001 for image generation if available, 
-  // or falling back to gemini-pro if it supports image gen in this context.
-  // For this implementation, we will use the REST API for Imagen if the SDK doesn't fully expose it yet, 
-  // or use the appropriate model name.
-  // Assuming 'imagen-3.0-generate-001' is the model ID for the provided key.
-  
-  // Since @google/generative-ai typically handles text/multimodal-to-text, 
-  // image generation might require a specific call. 
-  // However, for simplicity and standard usage, we'll try to use the model.
-  
-  // If the SDK doesn't support image generation directly yet, we might need a direct fetch.
-  // Let's use a direct fetch to the Gemini/Imagen API endpoint for image generation 
-  // as it is often a separate endpoint from generateContent.
-  
-  // Ref: https://ai.google.dev/api/rest/v1beta/models/predict (Vertex) or similar.
-  // But for AI Studio keys, it's often:
-  // https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict
-  
-  const modelName = isPro ? "imagen-3.0-generate-001" : "imagen-3.0-generate-001"; // Use same for now, or fast
+  // Use Imagen 4 model via Google AI Studio
+  // Pro uses the full quality model, regular uses the fast model
+  const modelName = isPro ? "imagen-4.0-generate-001" : "imagen-4.0-fast-generate-001";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict?key=${apiKey}`;
   
   // Construct aspect ratio
@@ -69,6 +48,9 @@ async function generateWithNanoBanana(
     "3:4": "3:4",
   };
   const ar = aspectRatioMap[options.aspectRatio || "1:1"] || "1:1";
+
+  console.log(`[Imagen] Generating with model: ${modelName}, aspect ratio: ${ar}`);
+  console.log(`[Imagen] Prompt: ${prompt.substring(0, 100)}...`);
 
   const response = await fetch(apiUrl, {
     method: "POST",
@@ -84,38 +66,54 @@ async function generateWithNanoBanana(
       parameters: {
         sampleCount: 1,
         aspectRatio: ar,
-        // seed: options.seed // usage depends on API support
+        personGeneration: "allow_adult",
+        safetySetting: "block_low_and_above",
       }
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    // Fallback: If direct Imagen API fails, try to use the SDK for text-to-image if supported,
-    // or return a mock if this is just a demo setup. 
-    // But since the user provided a real key, we should try to make it work.
-    // If 404, model might be different.
-    throw new Error(`Gemini/Imagen API error: ${response.status} ${response.statusText} - ${errorText}`);
+    console.error(`[Imagen] API Error: ${response.status} - ${errorText}`);
+    
+    // Try to parse error for better messaging
+    try {
+      const errorJson = JSON.parse(errorText);
+      const errorMessage = errorJson.error?.message || errorText;
+      throw new Error(`Imagen API error: ${errorMessage}`);
+    } catch {
+      throw new Error(`Imagen API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
   }
 
   const data = await response.json();
+  console.log(`[Imagen] Response received, parsing...`);
   
-  // Parse response structure (adjust based on actual Imagen response)
-  // Usually: predictions[0].bytesBase64Encoded or similar
+  // Parse response structure for Imagen 4
   const prediction = data.predictions?.[0];
   if (!prediction) {
-    throw new Error("No predictions returned from Gemini API");
+    console.error(`[Imagen] No predictions in response:`, JSON.stringify(data));
+    throw new Error("No predictions returned from Imagen API");
   }
   
-  const b64 = prediction.bytesBase64Encoded || prediction.b64;
+  // Imagen 4 returns base64 encoded image
+  const b64 = prediction.bytesBase64Encoded;
   if (b64) {
+    console.log(`[Imagen] Successfully generated image (base64 length: ${b64.length})`);
     return `data:image/png;base64,${b64}`;
   }
   
-  // If response has a URL
-  if (prediction.url) return prediction.url;
+  // Check for alternative response formats
+  if (prediction.image?.imageBytes) {
+    return `data:image/png;base64,${prediction.image.imageBytes}`;
+  }
+  
+  if (prediction.url) {
+    return prediction.url;
+  }
 
-  throw new Error("Unexpected response format from Gemini API");
+  console.error(`[Imagen] Unexpected response format:`, JSON.stringify(prediction));
+  throw new Error("Unexpected response format from Imagen API");
 }
 
 async function generateWithOpenAI(
@@ -159,7 +157,7 @@ async function generateWithOpenAI(
   return imageUrl;
 }
 
-async function saveToBlob(imageUrl: string, prompt: string): Promise<string> {
+async function saveToBlob(imageUrl: string): Promise<string> {
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
   if (!blobToken) {
@@ -204,61 +202,39 @@ export async function POST(request: NextRequest) {
 
     let imageUrl: string;
 
-    try {
-      switch (model) {
-        case "nano-banana":
-          imageUrl = await generateWithNanoBanana(prompt, false, {
-            referenceImageUrl,
-            aspectRatio,
-            resolution,
-            seed,
-          });
-          break;
-
-        case "nano-banana-pro":
-          imageUrl = await generateWithNanoBanana(prompt, true, {
-            referenceImageUrl,
-            aspectRatio,
-            resolution,
-            seed,
-          });
-          break;
-
-        case "openai":
-          imageUrl = await generateWithOpenAI(prompt, {
-            referenceImageUrl,
-            aspectRatio,
-            resolution,
-          });
-          break;
-
-        default:
-          return NextResponse.json({ error: "Invalid model specified" }, { status: 400 });
-      }
-    } catch (apiError) {
-      console.error("API Error:", apiError);
-      
-      // For demo purposes, return the style's example image if available
-      if (style && style.exampleImages.length > 0) {
-        return NextResponse.json({
-          imageUrl: style.exampleImages[0],
-          isDemo: true,
-          message: "API keys not configured. Showing example image.",
-          generationId: `demo-${Date.now()}`,
+    switch (model) {
+      case "nano-banana":
+        imageUrl = await generateWithGeminiImagen(prompt, false, {
+          referenceImageUrl,
+          aspectRatio,
+          resolution,
+          seed,
         });
-      }
+        break;
 
-      return NextResponse.json(
-        { 
-          error: "Generation failed. Please ensure API keys are configured.",
-          details: apiError instanceof Error ? apiError.message : "Unknown error"
-        },
-        { status: 500 }
-      );
+      case "nano-banana-pro":
+        imageUrl = await generateWithGeminiImagen(prompt, true, {
+          referenceImageUrl,
+          aspectRatio,
+          resolution,
+          seed,
+        });
+        break;
+
+      case "openai":
+        imageUrl = await generateWithOpenAI(prompt, {
+          referenceImageUrl,
+          aspectRatio,
+          resolution,
+        });
+        break;
+
+      default:
+        return NextResponse.json({ error: "Invalid model specified" }, { status: 400 });
     }
 
     // Save to Vercel Blob for persistence
-    const savedUrl = await saveToBlob(imageUrl, prompt);
+    const savedUrl = await saveToBlob(imageUrl);
 
     return NextResponse.json({
       imageUrl: savedUrl,
@@ -271,8 +247,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Generation error:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    
     return NextResponse.json(
-      { error: "Failed to generate image" },
+      { 
+        error: "Image generation failed",
+        details: errorMessage,
+      },
       { status: 500 }
     );
   }
