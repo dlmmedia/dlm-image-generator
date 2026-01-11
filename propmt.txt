@@ -1,0 +1,384 @@
+Here is a website.
+https://higgsfield.ai/
+
+Go to this website and the explore page (which is the main page), take inspiration from it - the card styling, the way it looks. Then you can go to the image generation page.
+https://higgsfield.ai/image/nano_banana_2
+
+Take inspiration for how it looks. You can take screenshots, you can scroll down on the explore page, understand what it looks like. Save those images as references.
+
+
+Then you can navigate to this repository.
+https://github.com/JimmyLv/awesome-nano-banana.git
+
+This has about 100 cases, so you can take all the images and all the prompts as a guideline as the engine for each category that this AI agent is going to offer.
+
+We are creating an AI agent which would make images using Nano Banana and OpenAI. In the repository, you will find prompts and different styles that could be used.
+
+So use those images as card images so that you display all those images and those styles and an ability to create those images.
+
+This is a comprehensive image generation system which has hundreds of different styles that could be generated. We can upload images as references, and it will use that to create a full experience.
+
+You can also navigate to OpenAI Image Generation (the latest model documentation) and the Nano Banana Pro (the latest model documentation) and take references from there as well.
+
+
+# 🎨 Comprehensive AI Image Generation Platform
+## (Nano Banana + OpenAI | Inspired by Higgsfield)
+
+---
+
+## 1. Purpose of This Document
+
+This Markdown file is the **primary execution context** for building a fully-featured AI image generation application.
+
+An AI agent or developer should be able to:
+- Read this file
+- Understand the **product vision**
+- Implement the **frontend, backend, storage, and AI integrations**
+- Deploy the application on **Vercel**
+- Use **Vercel Blob** for all generated assets
+
+This document serves as:
+- Product Requirements Document (PRD)
+- UI/UX reference
+- Technical architecture plan
+- Prompt & style engine definition
+
+---
+
+## 2. High-Level Product Vision
+
+We are building a **premium AI image generation web application** inspired by **Higgsfield.ai**, powered by:
+- **Nano Banana (Base + Pro)**
+- **OpenAI’s latest Image Generation models**
+
+The system supports:
+- Hundreds of predefined visual styles
+- Text-to-Image and Image-to-Image generation
+- Reference image uploads
+- Project-based workflows
+- Persistent cloud storage
+- Modern, card-based exploration UI
+
+This is not a single-prompt tool — it is a **complete image generation ecosystem**.
+
+---
+
+## 3. Core Inspirations & References
+
+### 3.1 UI & UX Inspiration — Higgsfield.ai
+
+Primary visual inspiration:
+- https://higgsfield.ai/
+- https://higgsfield.ai/image/nano_banana_2
+
+Key UI principles to extract:
+- Card-based exploration grid
+- Clean, premium, minimal design
+- Strong visual hierarchy
+- Subtle gradients, shadows, rounded corners
+- Clear separation between *Explore* and *Generate*
+
+The Explore page is the **entry point** of the app.
+The Image Generation page is the **core interaction surface**.
+
+Screenshots from these pages should be saved internally as **design references**.
+
+---
+
+### 3.2 Prompt & Style Engine — awesome-nano-banana
+
+Repository:
+- https://github.com/JimmyLv/awesome-nano-banana
+
+This repository contains ~100 curated **prompt cases**, each demonstrating:
+- A visual style
+- A creative technique
+- A specific rendering approach
+
+These cases form the **foundation of the app’s style library**.
+
+Each case must be converted into:
+- A UI card
+- A reusable prompt template
+- A selectable generation style
+
+---
+
+### 3.3 Model References
+
+Supported generation engines:
+- **Nano Banana (Base)**
+- **Nano Banana Pro (High-quality / 4K)**
+- **OpenAI Image Generation (latest model)**
+
+The system must be model-agnostic and extensible.
+
+---
+
+## 4. Application Structure
+
+### 4.1 Main Sections
+
+1. **Explore**
+2. **Generate**
+3. **Upload / Reference**
+4. **Gallery (Saved Projects)**
+
+---
+
+## 5. UI / UX Specification
+
+### 5.1 Explore Page
+
+Purpose:
+- Discovery
+- Inspiration
+- Style selection
+
+Layout:
+- Header (Logo + Navigation)
+- Hero search bar
+- Filter controls (categories, tags)
+- Card grid (lazy loaded)
+
+Each **Style Card** includes:
+- Preview image
+- Style name
+- Short description
+- Model compatibility badges
+- CTA: “Generate with this style”
+
+The visual language should closely resemble **Higgsfield’s card design**.
+
+---
+
+### 5.2 Image Generation Page
+
+Purpose:
+- Core creation workflow
+
+Sections:
+
+#### Input Panel
+- Prompt textarea
+- Reference image upload (optional)
+- Model selector:
+  - Nano Banana
+  - Nano Banana Pro
+  - OpenAI Image
+- Style selector (from library)
+
+#### Advanced Controls
+- Resolution (1K / 2K / 4K)
+- Aspect ratio
+- Seed (optional)
+- Style intensity
+
+#### Output Panel
+- Loading / progress state
+- Generated image variants
+- Actions:
+  - Download
+  - Save to project
+  - Regenerate
+
+---
+
+### 5.3 Gallery / Projects Page
+
+Purpose:
+- Persistence
+- Reuse
+- Iteration
+
+Features:
+- Saved generations
+- Grouped by project
+- Metadata display (prompt, model, date)
+- Re-generate from history
+
+---
+
+## 6. Prompt & Style Library System
+
+### 6.1 Source of Truth
+
+All styles originate from:
+- awesome-nano-banana repository cases
+
+Each case becomes a **Style Object**.
+
+### 6.2 Style Object Schema
+
+```json
+{
+  "id": "string",
+  "name": "string",
+  "category": "string",
+  "promptTemplate": "string",
+  "exampleImages": ["url"],
+  "tags": ["string"],
+  "recommendedModel": "nano-banana | nano-banana-pro | openai"
+}
+6.3 Categories (Examples)
+Characters & Avatars
+
+Product Visualization
+
+Architecture
+
+Concept Art
+
+Ads & Posters
+
+Experimental / Abstract
+
+Photography Simulation
+
+3D & CGI
+
+7. Backend Architecture
+7.1 Tech Stack
+Layer	Technology
+Frontend	Next.js (React)
+Styling	Tailwind CSS
+Backend	Next.js API Routes
+Storage	Vercel Blob
+Auth (optional)	NextAuth
+Deployment	Vercel
+
+7.2 API Endpoints
+text
+Copy code
+POST   /api/generate
+POST   /api/upload
+GET    /api/styles
+GET    /api/projects
+GET    /api/project/:id
+7.3 Image Generation Flow
+User selects style + prompt
+
+Optional reference images uploaded
+
+Backend prepares final prompt
+
+Request sent to selected model
+
+Result images stored in Vercel Blob
+
+Metadata saved to project record
+
+URLs returned to frontend
+
+8. Storage & Data Management
+8.1 Vercel Blob Usage
+All images must be stored in Vercel Blob:
+
+Generated outputs
+
+Uploaded references
+
+Style previews
+
+8.2 Project Data Schema
+json
+Copy code
+{
+  "projectId": "string",
+  "userId": "string",
+  "items": [
+    {
+      "imageUrl": "string",
+      "prompt": "string",
+      "model": "string",
+      "styleId": "string",
+      "createdAt": "timestamp"
+    }
+  ]
+}
+9. Model Integration Strategy
+9.1 Nano Banana
+Fast, cost-efficient
+
+Default for most styles
+
+9.2 Nano Banana Pro
+High-fidelity
+
+Supports native 4K
+
+Used for premium styles
+
+9.3 OpenAI Image Generation
+Fallback or alternative
+
+Best for reasoning-heavy prompts
+
+Supports reference image conditioning
+
+The backend must abstract models behind a single generation interface.
+
+10. Deployment & Environment
+10.1 Deployment
+Platform: Vercel
+
+Frontend + Backend deployed together
+
+Blob storage enabled
+
+CDN caching for images
+
+10.2 Environment Variables
+env
+Copy code
+NANO_BANANA_API_KEY=
+OPENAI_API_KEY=
+BLOB_READ_WRITE_TOKEN=
+11. Testing & Validation
+UI responsiveness (desktop + mobile)
+
+Prompt correctness
+
+Model switching reliability
+
+Blob storage limits
+
+Regeneration consistency
+
+12. Future Enhancements
+Public community gallery
+
+Credit-based usage system
+
+Batch generation
+
+Prompt auto-improvement AI
+
+Style marketplace
+
+Animation & video generation extensions
+
+13. Final Notes
+This document is intentionally comprehensive.
+
+Any AI agent or developer reading this file should:
+
+Treat it as the single source of truth
+
+Implement features exactly as defined
+
+Preserve design inspiration while avoiding direct copying
+
+Build the system in a modular, extensible way
+
+14. References
+Higgsfield UI & UX inspiration: https://higgsfield.ai/
+
+Higgsfield Nano Banana Image Page: https://higgsfield.ai/image/nano_banana_2
+
+awesome-nano-banana prompt library: https://github.com/JimmyLv/awesome-nano-banana
+
+
+
+---
+
