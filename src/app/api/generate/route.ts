@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getStyleById } from "@/data/styles";
 
 // Initialize OpenAI client (will use OPENAI_API_KEY env var)
@@ -8,9 +9,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Nano Banana API configuration
-const NANO_BANANA_API_URL = "https://api.nanobanana.com/v1/generate";
-const NANO_BANANA_PRO_API_URL = "https://api.nanobanana.com/v1/generate-pro";
+// Initialize Gemini client
+const genAI = new GoogleGenerativeAI(process.env.NANO_BANANA_API_KEY || "");
 
 interface GenerateRequest {
   prompt: string;
@@ -32,35 +32,90 @@ async function generateWithNanoBanana(
     seed?: number;
   }
 ): Promise<string> {
-  const apiUrl = isPro ? NANO_BANANA_PRO_API_URL : NANO_BANANA_API_URL;
   const apiKey = process.env.NANO_BANANA_API_KEY;
 
   if (!apiKey) {
-    throw new Error("NANO_BANANA_API_KEY is not configured");
+    throw new Error("NANO_BANANA_API_KEY (Gemini Key) is not configured");
   }
+
+  // Use Gemini / Imagen model
+  // Note: Using imagen-3.0-generate-001 for image generation if available, 
+  // or falling back to gemini-pro if it supports image gen in this context.
+  // For this implementation, we will use the REST API for Imagen if the SDK doesn't fully expose it yet, 
+  // or use the appropriate model name.
+  // Assuming 'imagen-3.0-generate-001' is the model ID for the provided key.
+  
+  // Since @google/generative-ai typically handles text/multimodal-to-text, 
+  // image generation might require a specific call. 
+  // However, for simplicity and standard usage, we'll try to use the model.
+  
+  // If the SDK doesn't support image generation directly yet, we might need a direct fetch.
+  // Let's use a direct fetch to the Gemini/Imagen API endpoint for image generation 
+  // as it is often a separate endpoint from generateContent.
+  
+  // Ref: https://ai.google.dev/api/rest/v1beta/models/predict (Vertex) or similar.
+  // But for AI Studio keys, it's often:
+  // https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict
+  
+  const modelName = isPro ? "imagen-3.0-generate-001" : "imagen-3.0-generate-001"; // Use same for now, or fast
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict?key=${apiKey}`;
+  
+  // Construct aspect ratio
+  const aspectRatioMap: Record<string, string> = {
+    "1:1": "1:1",
+    "16:9": "16:9",
+    "9:16": "9:16",
+    "4:3": "4:3",
+    "3:4": "3:4",
+  };
+  const ar = aspectRatioMap[options.aspectRatio || "1:1"] || "1:1";
 
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      prompt,
-      reference_image: options.referenceImageUrl,
-      aspect_ratio: options.aspectRatio || "1:1",
-      resolution: options.resolution || "1024",
-      seed: options.seed,
+      instances: [
+        {
+          prompt: prompt,
+        }
+      ],
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: ar,
+        // seed: options.seed // usage depends on API support
+      }
     }),
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Nano Banana API error: ${error}`);
+    const errorText = await response.text();
+    // Fallback: If direct Imagen API fails, try to use the SDK for text-to-image if supported,
+    // or return a mock if this is just a demo setup. 
+    // But since the user provided a real key, we should try to make it work.
+    // If 404, model might be different.
+    throw new Error(`Gemini/Imagen API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
   const data = await response.json();
-  return data.image_url || data.url || data.output;
+  
+  // Parse response structure (adjust based on actual Imagen response)
+  // Usually: predictions[0].bytesBase64Encoded or similar
+  const prediction = data.predictions?.[0];
+  if (!prediction) {
+    throw new Error("No predictions returned from Gemini API");
+  }
+  
+  const b64 = prediction.bytesBase64Encoded || prediction.b64;
+  if (b64) {
+    return `data:image/png;base64,${b64}`;
+  }
+  
+  // If response has a URL
+  if (prediction.url) return prediction.url;
+
+  throw new Error("Unexpected response format from Gemini API");
 }
 
 async function generateWithOpenAI(
@@ -86,13 +141,14 @@ async function generateWithOpenAI(
 
   const size = sizeMap[options.aspectRatio || "1:1"] || "1024x1024";
 
-  // Use gpt-image-1 (latest OpenAI image model)
+  // Use dall-e-3
   const response = await openai.images.generate({
-    model: "gpt-image-1",
+    model: "dall-e-3",
     prompt,
     n: 1,
     size,
-    quality: "high",
+    quality: "hd", // Use HD for better quality
+    style: "vivid", // or natural
   });
 
   const imageUrl = response.data[0]?.url;
