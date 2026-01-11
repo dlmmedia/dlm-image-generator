@@ -157,8 +157,7 @@ export function StickyScrollGallery() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start 90%", "end end"], // Start when top of container is 90% into viewport (nearly visible)
-    layoutEffect: false,
+    offset: ["start 90%", "end end"],
   });
 
   const bentoOpacity = useTransform(
