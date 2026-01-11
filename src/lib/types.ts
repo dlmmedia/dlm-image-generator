@@ -70,7 +70,7 @@ export const ASPECT_RATIOS = [
 ] as const;
 
 export const RESOLUTIONS = [
-  { id: "1024", name: "1K", description: "1024px" },
-  { id: "2048", name: "2K", description: "2048px" },
+  { id: "1024", name: "1K", description: "1024px", proBadge: false },
+  { id: "2048", name: "2K", description: "2048px", proBadge: false },
   { id: "4096", name: "4K", description: "4096px", proBadge: true },
 ] as const;
